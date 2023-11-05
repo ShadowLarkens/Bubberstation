@@ -46,7 +46,8 @@
 			//Mutations and radiation
 			handle_mutations(seconds_per_tick, times_fired)
 			//Breathing, if applicable
-			handle_breathing(seconds_per_tick, times_fired)
+			if(!isbelly(loc))
+				handle_breathing(seconds_per_tick, times_fired)
 
 		handle_diseases(seconds_per_tick, times_fired)// DEAD check is in the proc itself; we want it to spread even if the mob is dead, but to handle its disease-y properties only if you're not.
 
@@ -58,9 +59,10 @@
 			handle_random_events(seconds_per_tick, times_fired)
 
 		//Handle temperature/pressure differences between body and environment
-		var/datum/gas_mixture/environment = loc.return_air()
-		if(environment)
-			handle_environment(environment, seconds_per_tick, times_fired)
+		if(!isbelly(loc))
+			var/datum/gas_mixture/environment = loc.return_air()
+			if(environment)
+				handle_environment(environment, seconds_per_tick, times_fired)
 
 		handle_gravity(seconds_per_tick, times_fired)
 

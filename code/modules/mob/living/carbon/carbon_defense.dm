@@ -220,8 +220,6 @@
 		if(wounds.try_handling(user))
 			return TRUE
 
-	return FALSE
-
 
 /mob/living/carbon/attack_paw(mob/living/carbon/human/user, list/modifiers)
 

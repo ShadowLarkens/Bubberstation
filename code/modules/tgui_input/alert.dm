@@ -135,3 +135,58 @@
 
 /datum/tgui_alert/proc/set_choice(choice)
 	src.choice = choice
+
+/**
+ * Creates an asynchronous TGUI alert window with an associated callback.
+ *
+ * This proc should be used to create alerts that invoke a callback with the user's chosen option.
+ * Arguments:
+ * * user - The user to show the alert to.
+ * * message - The content of the alert, shown in the body of the TGUI window.
+ * * title - The of the alert modal, shown on the top of the TGUI window.
+ * * buttons - The options that can be chosen by the user, each string is assigned a button on the UI.
+ * * callback - The callback to be invoked when a choice is made.
+ * * timeout - The timeout of the alert, after which the modal will close and qdel itself. Disabled by default, can be set to seconds otherwise.
+ */
+/proc/tgui_alert_async(mob/user, message = "", title, list/buttons = list("Ok"), datum/callback/callback, timeout = 0, autofocus = TRUE)
+	if (istext(buttons))
+		stack_trace("tgui_alert() received text for buttons instead of list")
+		return
+	if (istext(user))
+		stack_trace("tgui_alert() received text for user instead of list")
+		return
+	if (!user)
+		user = usr
+	if (!istype(user))
+		if (istype(user, /client))
+			var/client/client = user
+			user = client.mob
+		else
+			return
+	var/datum/tgui_alert/async/alert = new(user, message, title, buttons, callback, timeout, autofocus)
+	alert.ui_interact(user)
+
+/**
+ * # async tgui_modal
+ *
+ * An asynchronous version of tgui_modal to be used with callbacks instead of waiting on user responses.
+ */
+/datum/tgui_alert/async
+	/// The callback to be invoked by the tgui_modal upon having a choice made.
+	var/datum/callback/callback
+
+/datum/tgui_alert/async/New(mob/user, message, title, list/buttons, callback, timeout, autofocus)
+	..(user, message, title, buttons, timeout, autofocus)
+	src.callback = callback
+
+/datum/tgui_alert/async/Destroy(force, ...)
+	QDEL_NULL(callback)
+	. = ..()
+
+/datum/tgui_alert/async/set_choice(choice)
+	. = ..()
+	if(!isnull(src.choice))
+		callback?.InvokeAsync(src.choice)
+
+/datum/tgui_alert/async/wait()
+	return
