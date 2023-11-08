@@ -82,8 +82,7 @@
 			recent_sound = TRUE
 
 /obj/belly/proc/living_entered(mob/living/M)
-	// TODO: VRPanel
-	// M.updateVRPanel()
+	updateVRPanels()
 	var/raw_desc //Let's use this to avoid needing to write the reformat code twice
 	if(absorbed_desc && M.vore_info.absorbed)
 		raw_desc = absorbed_desc
@@ -158,155 +157,15 @@
 	if(ismob(prey))
 		var/mob/ourmob = prey
 		ourmob.reset_perspective(owner)
-	// owner.updateVRPanel()
 	if(isanimal(owner))
 		owner.update_icon()
 
-	// for(var/mob/living/M in contents)
-	// 	M.updateVRPanel()
+	updateVRPanels()
 
 	// if(prey.ckey)
 		// GLOB.prey_eaten_roundstat++
 		// if(owner.mind)
 		// 	owner.mind.vore_prey_eaten++
-
-
-// The next function gets the messages set on the belly, in human-readable format.
-// This is useful in customization boxes and such. The delimiter right now is \n\n so
-// in message boxes, this looks nice and is easily delimited.
-/obj/belly/proc/get_messages(type, delim = "\n\n")
-	ASSERT(type == "smo" || type == "smi" || type == "asmo" || type == "asmi" || type == "dmo" || type == "dmp" || type == "amo" || type == "amp" || type == "uamo" || type == "uamp" || type == "em" || type == "ema" || type == "im_digest" || type == "im_hold" || type == "im_holdabsorbed" || type == "im_absorb" || type == "im_heal" || type == "im_drain" || type == "im_steal" || type == "im_egg" || type == "im_shrink" || type == "im_grow" || type == "im_unabsorb")
-
-	var/list/raw_messages
-	switch(type)
-		if("smo")
-			raw_messages = struggle_messages_outside
-		if("smi")
-			raw_messages = struggle_messages_inside
-		if("asmo")
-			raw_messages = absorbed_struggle_messages_outside
-		if("asmi")
-			raw_messages = absorbed_struggle_messages_inside
-		if("dmo")
-			raw_messages = digest_messages_owner
-		if("dmp")
-			raw_messages = digest_messages_prey
-		if("em")
-			raw_messages = examine_messages
-		if("ema")
-			raw_messages = examine_messages_absorbed
-		if("amo")
-			raw_messages = absorb_messages_owner
-		if("amp")
-			raw_messages = absorb_messages_prey
-		if("uamo")
-			raw_messages = unabsorb_messages_owner
-		if("uamp")
-			raw_messages = unabsorb_messages_prey
-		if("im_digest")
-			raw_messages = emote_lists[DM_DIGEST]
-		if("im_hold")
-			raw_messages = emote_lists[DM_HOLD]
-		if("im_holdabsorbed")
-			raw_messages = emote_lists[DM_HOLD_ABSORBED]
-		if("im_absorb")
-			raw_messages = emote_lists[DM_ABSORB]
-		if("im_heal")
-			raw_messages = emote_lists[DM_HEAL]
-		if("im_drain")
-			raw_messages = emote_lists[DM_DRAIN]
-		if("im_steal")
-			raw_messages = emote_lists[DM_SIZE_STEAL]
-		if("im_egg")
-			raw_messages = emote_lists[DM_EGG]
-		if("im_shrink")
-			raw_messages = emote_lists[DM_SHRINK]
-		if("im_grow")
-			raw_messages = emote_lists[DM_GROW]
-		if("im_unabsorb")
-			raw_messages = emote_lists[DM_UNABSORB]
-	var/messages = null
-	if(raw_messages)
-		messages = raw_messages.Join(delim)
-	return messages
-
-// The next function sets the messages on the belly, from human-readable var
-// replacement strings and linebreaks as delimiters (two \n\n by default).
-// They also sanitize the messages.
-/obj/belly/proc/set_messages(raw_text, type, delim = "\n\n")
-	ASSERT(type == "smo" || type == "smi" || type == "asmo" || type == "asmi" || type == "dmo" || type == "dmp" || type == "amo" || type == "amp" || type == "uamo" || type == "uamp" || type == "em" || type == "ema" || type == "im_digest" || type == "im_hold" || type == "im_holdabsorbed" || type == "im_absorb" || type == "im_heal" || type == "im_drain" || type == "im_steal" || type == "im_egg" || type == "im_shrink" || type == "im_grow" || type == "im_unabsorb")
-
-	var/list/raw_list = splittext(html_encode(raw_text),delim)
-	if(raw_list.len > 10)
-		raw_list.Cut(11)
-		warning("[owner] tried to set [lowertext(name)] with 11+ messages")
-
-	for(var/i = 1, i <= raw_list.len, i++)
-		if((length(raw_list[i]) > 160 || length(raw_list[i]) < 10) && !(type == "im_digest" || type == "im_hold" || type == "im_holdabsorbed" || type == "im_absorb" || type == "im_heal" || type == "im_drain" || type == "im_steal" || type == "im_egg" || type == "im_shrink" || type == "im_grow" || type == "im_unabsorb")) //160 is fudged value due to htmlencoding increasing the size
-			raw_list.Cut(i,i)
-			warning("[owner] tried to set [lowertext(name)] with >121 or <10 char message")
-		else if((type == "im_digest" || type == "im_hold" || type == "im_holdabsorbed" || type == "im_absorb" || type == "im_heal" || type == "im_drain" || type == "im_steal" || type == "im_egg" || type == "im_shrink" || type == "im_grow" || type == "im_unabsorb") && (length(raw_list[i]) > 510 || length(raw_list[i]) < 10))
-			raw_list.Cut(i,i)
-			warning("[owner] tried to set [lowertext(name)] idle message with >501 or <10 char message")
-		else if((type == "em" || type == "ema") && (length(raw_list[i]) > 260 || length(raw_list[i]) < 10))
-			raw_list.Cut(i,i)
-			warning("[owner] tried to set [lowertext(name)] examine message with >260 or <10 char message")
-		else
-			raw_list[i] = readd_quotes(raw_list[i])
-			//Also fix % sign for var replacement
-			raw_list[i] = replacetext(raw_list[i],"&#37;","%")
-
-	ASSERT(raw_list.len <= 10) //Sanity
-
-	switch(type)
-		if("smo")
-			struggle_messages_outside = raw_list
-		if("smi")
-			struggle_messages_inside = raw_list
-		if("asmo")
-			absorbed_struggle_messages_outside = raw_list
-		if("asmi")
-			absorbed_struggle_messages_inside = raw_list
-		if("dmo")
-			digest_messages_owner = raw_list
-		if("dmp")
-			digest_messages_prey = raw_list
-		if("amo")
-			absorb_messages_owner = raw_list
-		if("amp")
-			absorb_messages_prey = raw_list
-		if("uamo")
-			unabsorb_messages_owner = raw_list
-		if("uamp")
-			unabsorb_messages_prey = raw_list
-		if("em")
-			examine_messages = raw_list
-		if("ema")
-			examine_messages_absorbed = raw_list
-		if("im_digest")
-			emote_lists[DM_DIGEST] = raw_list
-		if("im_hold")
-			emote_lists[DM_HOLD] = raw_list
-		if("im_holdabsorbed")
-			emote_lists[DM_HOLD_ABSORBED] = raw_list
-		if("im_absorb")
-			emote_lists[DM_ABSORB] = raw_list
-		if("im_heal")
-			emote_lists[DM_HEAL] = raw_list
-		if("im_drain")
-			emote_lists[DM_DRAIN] = raw_list
-		if("im_steal")
-			emote_lists[DM_SIZE_STEAL] = raw_list
-		if("im_egg")
-			emote_lists[DM_EGG] = raw_list
-		if("im_shrink")
-			emote_lists[DM_SHRINK] = raw_list
-		if("im_grow")
-			emote_lists[DM_GROW] = raw_list
-		if("im_unabsorb")
-			emote_lists[DM_UNABSORB] = raw_list
-
-	return
 
 /obj/belly/proc/update_internal_overlay()
 	// TODO: vore_fx
@@ -321,69 +180,94 @@
 	// 		return
 	// 	vore_fx(owner,1)
 
-// The next function gets the messages set on the belly, in human-readable format.
-// This is useful in customization boxes and such. The delimiter right now is \n\n so
-// in message boxes, this looks nice and is easily delimited.
-/obj/belly/proc/get_reagent_messages(var/type, var/delim = "\n\n")
-	ASSERT(type == "full1" || type == "full2" || type == "full3" || type == "full4" || type == "full5")
-	var/list/raw_messages
-
-	switch(type)
-		if("full1")
-			raw_messages = fullness1_messages
-		if("full2")
-			raw_messages = fullness2_messages
-		if("full3")
-			raw_messages = fullness3_messages
-		if("full4")
-			raw_messages = fullness4_messages
-		if("full5")
-			raw_messages = fullness5_messages
-
-	var/messages = raw_messages.Join(delim)
-	return messages
-
-// The next function sets the messages on the belly, from human-readable var
-
-// replacement strings and linebreaks as delimiters (two \n\n by default).
-// They also sanitize the messages.
-/obj/belly/proc/set_reagent_messages(var/raw_text, var/type, var/delim = "\n\n")
-	ASSERT(type == "full1" || type == "full2" || type == "full3" || type == "full4" || type == "full5")
-
-	var/list/raw_list = splittext(html_encode(raw_text),delim)
-	if(raw_list.len > 10)
-		raw_list.Cut(11)
-		warning("[owner] tried to set [lowertext(name)] with 11+ messages")
-
-	for(var/i = 1, i <= raw_list.len, i++)
-		if(length(raw_list[i]) > 160 || length(raw_list[i]) < 10) //160 is fudged value due to htmlencoding increasing the size
-			raw_list.Cut(i,i)
-			warning("[owner] tried to set [lowertext(name)] with >121 or <10 char message")
-		else
-			raw_list[i] = readd_quotes(raw_list[i])
-			//Also fix % sign for var replacement
-			raw_list[i] = replacetext(raw_list[i],"&#37;","%")
-
-	ASSERT(raw_list.len <= 10) //Sanity
-
-	switch(type)
-		if("full1")
-			fullness1_messages = raw_list
-		if("full2")
-			fullness2_messages = raw_list
-		if("full3")
-			fullness3_messages = raw_list
-		if("full4")
-			fullness4_messages = raw_list
-		if("full5")
-			fullness5_messages = raw_list
-
-	return
 // Release a specific atom from the contents of this belly into the owning mob's location.
 // If that location is another mob, the atom is transferred into whichever of its bellies the owning mob is in.
 // Returns the number of atoms so released.
 /obj/belly/proc/release_specific_contents(atom/movable/M, silent = FALSE)
-	// TODO: release_specific_contents
+	if (!(M in contents))
+		return 0 // They weren't in this belly anyway
+
+	// if(istype(M, /mob/living/simple_mob/vore/morph/dominated_prey))
+	// 	var/mob/living/simple_mob/vore/morph/dominated_prey/p = M
+	// 	p.undo_prey_takeover(FALSE)
+	// 	return 0
+	// for(var/mob/living/L in M.contents)
+		// L.vore_info.muffled = FALSE
+		// L.forced_psay = FALSE
+
+	// for(var/obj/item/weapon/holder/H in M.contents)
+	// 	H.held_mob.prey_info.muffled = FALSE
+		// H.held_mob.forced_psay = FALSE
+
+	// if(isliving(M))
+	// 	var/mob/living/slip = M
+	// 	slip.slip_protect = world.time + 25 // This is to prevent slipping back into your pred if they stand on soap or something.
+	//Place them into our drop_location
+	M.forceMove(drop_location())
+	if(ismob(M))
+		var/mob/ourmob = M
+		ourmob.reset_perspective(null)
+	items_preserved -= M
+
+	//Special treatment for absorbed prey
+	if(isliving(M))
+		var/mob/living/ML = M
+		// var/mob/living/OW = owner
+		// if(ML.client)
+		// 	ML.stop_sound_channel(CHANNEL_PREYLOOP) //Stop the internal loop, it'll restart if the isbelly check on next tick anyway
+		// if(ML.vore_info.muffled)
+		// 	ML.vore_info.muffled = FALSE
+		// if(ML.forced_psay)
+		// 	ML.forced_psay = FALSE
+		if(ML.vore_info.absorbed)
+			ML.vore_info.absorbed = FALSE
+			// handle_absorb_langs(ML, owner)
+			// if(ishuman(M) && ishuman(OW))
+			// 	var/mob/living/carbon/human/Prey = M
+			// 	var/mob/living/carbon/human/Pred = OW
+			// 	var/absorbed_count = 2 //Prey that we were, plus the pred gets a portion
+			// 	for(var/mob/living/P in contents)
+			// 		if(P.absorbed)
+			// 			absorbed_count++
+			// 	Pred.bloodstr.trans_to(Prey, Pred.reagents.total_volume / absorbed_count)
+
+	//Clean up our own business
+	if(!ishuman(owner))
+		owner.update_icons()
+
+	//Determines privacy
+	var/privacy_range = world.view
+	//var/privacy_volume = 100
+	switch(eating_privacy_local) //Third case of if("loud") not defined, as it'd just leave privacy_range and volume untouched
+		if("default")
+			if(owner.vore_info.eating_privacy_global)
+				privacy_range = 1
+				//privacy_volume = 25
+		if("subtle")
+			privacy_range = 1
+			//privacy_volume = 25
+
+	//Print notifications/sound if necessary
+	if(istype(M, /mob/dead/observer))
+		silent = TRUE
+	if(!silent)
+		owner.visible_message("<font color='green'><b>[owner] [release_verb] [M] from their [lowertext(name)]!</b></font>", vision_distance = privacy_range)
+		var/soundfile
+		if(!fancy_vore)
+			soundfile = classic_release_sounds[release_sound]
+		else
+			soundfile = fancy_release_sounds[release_sound]
+		if(soundfile)
+			playsound_with_pref(src, soundfile, vol = sound_volume, vary = 1, falloff_exponent = VORE_SOUND_FALLOFF, frequency = noise_freq, preference = /datum/preference/toggle/vore_eating_sounds) //CHOMPEdit
+	//Should fix your view not following you out of mobs sometimes!
+	if(ismob(M))
+		var/mob/ourmob = M
+		ourmob.reset_perspective(null)
+
+	// if(!owner.ckey && escape_stun)
+	// 	owner.Weaken(escape_stun)
+
+	return 1
 
 /obj/belly/proc/handle_absorb_langs()
 	// TODO: absorb_langs
@@ -392,12 +276,71 @@
 // Release all contents of this belly into the owning mob's location.
 // If that location is another mob, contents are transferred into whichever of its bellies the owning mob is in.
 // Returns the number of mobs so released.
-/obj/belly/proc/release_all_contents(include_absorbed = FALSE, silent = FALSE)
+/obj/belly/proc/release_all_contents(include_absorbed = FALSE, silent = FALSE)//Don't bother if we don't have contents
+	if(!contents.len)
+		return FALSE
+
+	//Find where we should drop things into (certainly not the owner)
+	var/count = 0
+
+	//Iterate over contents and move them all
+	for(var/atom/movable/AM as anything in contents)
+		if(isliving(AM))
+			var/mob/living/L = AM
+			if(L.vore_info?.absorbed && !include_absorbed)
+				continue
+		count += release_specific_contents(AM, silent = TRUE)
+
+	//Clean up our own business
+	items_preserved.Cut()
+	if(!ishuman(owner))
+		owner.update_icons()
+
+	//Determines privacy
+	var/privacy_range = world.view
+	//var/privacy_volume = 100
+	switch(eating_privacy_local) //Third case of if("loud") not defined, as it'd just leave privacy_range and volume untouched
+		if("default")
+			if(owner.vore_info?.eating_privacy_global)
+				privacy_range = 1
+				//privacy_volume = 25
+		if("subtle")
+			privacy_range = 1
+			//privacy_volume = 25
+
+	//Print notifications/sound if necessary
+	if(!silent && count)
+		owner.visible_message("<font color='green'><b>[owner] [release_verb] everything from their [lowertext(name)]!</b></font>", vision_distance = privacy_range)
+		var/soundfile
+		if(!fancy_vore)
+			soundfile = classic_release_sounds[release_sound]
+		else
+			soundfile = fancy_release_sounds[release_sound]
+		if(soundfile)
+			playsound_with_pref(src, soundfile, vol = sound_volume, vary = 1, falloff_exponent = VORE_SOUND_FALLOFF, frequency = noise_freq, preference = /datum/preference/toggle/vore_eating_sounds) //CHOMPEdit
+
+	return count
 	// TODO: release_all_contents
 
 //Transfers contents from one belly to another
 /obj/belly/proc/transfer_contents(atom/movable/content, obj/belly/target, silent = 0)
-	// TODO: transfer_contents
+	if(!(content in src) || !istype(target))
+		return
+	// content.belly_cycles = 0 //CHOMPEdit
+	content.forceMove(target)
+	if(ismob(content))
+		var/mob/ourmob = content
+		ourmob.reset_perspective(owner)
+	// if(isitem(content))
+	// 	var/obj/item/I = content
+	// 	if(istype(I,/obj/item/weapon/card/id))
+	// 		I.gurgle_contaminate(target.contents, target.contamination_flavor, target.contamination_color)
+	// 	if(I.gurgled && target.contaminates)
+	// 		I.decontaminate()
+	// 		I.gurgle_contaminate(target.contents, target.contamination_flavor, target.contamination_color)
+	items_preserved -= content
+	updateVRPanels()
+	owner.update_icon()
 
 /obj/belly/proc/handle_digestion_death(mob/living/M, instant = FALSE)
 	// TODO: handle_digestion_death
@@ -405,6 +348,10 @@
 // Handle a mob being absorbed
 /obj/belly/proc/absorb_living(mob/living/M)
 	// TODO: absorb_living
+	
+// Handle a mob being unabsorbed
+/obj/belly/proc/unabsorb_living(mob/living/M)
+	// TODO: unabsorb_living
 
 //This is gonna end up a long proc, but its gonna have to make do for now
 /obj/belly/proc/ReagentSwitch()

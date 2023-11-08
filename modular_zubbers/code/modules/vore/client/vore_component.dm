@@ -89,7 +89,9 @@
 
 /datum/component/vore/proc/mob_login(mob/living/source)
 	SIGNAL_HANDLER
-	
+
+	source.verbs |= /mob/living/proc/escapeOOC
+
 	if(!source.vore_info.no_vore)
 		// source.verbs |= /mob/living/proc/vorebelly_printout
 		if(!source.vorePanel)
@@ -134,25 +136,24 @@
 
 	//Determining vore attempt privacy
 	var/message_range = world.view
-	// if(!pred.is_slipping && !prey.is_slipping) //We only care about privacy preference if it's NOT a spontaneous vore.
-	// 	switch(belly.eating_privacy_local) //if("loud") case not added, as it would not modify message_range
-	// 		if("default")
-	// 			if(pred.eating_privacy_global)
-	// 				message_range = 1
-	// 		if("subtle")
-	// 			message_range = 1
-
-
+	//We only care about privacy preference if it's NOT a spontaneous vore.
+	if(!pred.GetComponent(/datum/component/force_move) && !prey.GetComponent(/datum/component/force_move))
+		switch(belly.eating_privacy_local) //if("loud") case not added, as it would not modify message_range
+			if("default")
+				if(pred.vore_info.eating_privacy_global)
+					message_range = 1
+			if("subtle")
+				message_range = 1
 
 	// Slipnoms from chompstation downstream, credit to cadyn for the original PR.
 	// Prepare messages
-	// if(prey.is_slipping)
-	// 	attempt_msg = "<span class='warning'>It seems like [prey] is about to slide into [pred]'s [lowertext(belly.name)]!</span>"
-	// 	success_msg = "<span class='warning'>[prey] suddenly slides into [pred]'s [lowertext(belly.name)]!</span>"
-	// else if(pred.is_slipping)
-	// 	attempt_msg = "<span class='warning'>It seems like [prey] is gonna end up inside [pred]'s [lowertext(belly.name)] as [pred] comes sliding over!</span>"
-	// 	success_msg = "<span class='warning'>[prey] suddenly slips inside of [pred]'s [lowertext(belly.name)] as [pred] slides into them!</span>"
-	/*else*/ if(user == pred) //Feeding someone to yourself
+	if(prey.GetComponent(/datum/component/force_move))
+		attempt_msg = "<span class='warning'>It seems like [prey] is about to slide into [pred]'s [lowertext(belly.name)]!</span>"
+		success_msg = "<span class='warning'>[prey] suddenly slides into [pred]'s [lowertext(belly.name)]!</span>"
+	else if(pred.GetComponent(/datum/component/force_move))
+		attempt_msg = "<span class='warning'>It seems like [prey] is gonna end up inside [pred]'s [lowertext(belly.name)] as [pred] comes sliding over!</span>"
+		success_msg = "<span class='warning'>[prey] suddenly slips inside of [pred]'s [lowertext(belly.name)] as [pred] slides into them!</span>"
+	else if(user == pred) //Feeding someone to yourself
 		attempt_msg = "<span class='warning'>[pred] is attempting to [lowertext(belly.vore_verb)] [prey] into their [lowertext(belly.name)]!</span>"
 		success_msg = "<span class='warning'>[pred] manages to [lowertext(belly.vore_verb)] [prey] into their [lowertext(belly.name)]!</span>"
 	else //Feeding someone to another person
@@ -182,6 +183,7 @@
 	// If we got this far, nom successful! Announce it!
 	user.visible_message(success_msg, vision_distance = message_range)
 
+	// TODO: holders
 	// Actually shove prey into the belly.
 	// if(istype(prey.loc, /obj/item/weapon/holder))
 	// 	var/obj/item/weapon/holder/H = prey.loc
@@ -196,9 +198,8 @@
 
 	user.update_icon()
 
-	// TODO: Inform Admins
-	// if(pred == user)
-	// 	add_attack_logs(pred, prey, "Eaten via [belly.name]")
-	// else
-	// 	add_attack_logs(user, pred, "Forced to eat [key_name(prey)]")
+	if(pred == user)
+		log_combat(pred, prey, "Eaten via [belly.name]")
+	else
+		log_combat(user, pred, "Forced to eat [key_name(prey)]")
 	return TRUE

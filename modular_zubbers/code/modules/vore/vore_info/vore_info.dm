@@ -90,3 +90,7 @@
 							"They are so morbidly obese, you wonder how they can even stand, let alone waddle around the station. They can't get any fatter without being immobilized.")
 
 	var/no_vore = FALSE					// If the character/mob can vore.
+	var/digestion_in_progress = FALSE	// CHOMPEdit: Gradual corpse gurgles
+	var/weight = 137					// Weight for mobs for weightgain system
+	var/weight_gain = 1 				// How fast you gain weight
+	var/weight_loss = 0.5 				// How fast you lose weight
